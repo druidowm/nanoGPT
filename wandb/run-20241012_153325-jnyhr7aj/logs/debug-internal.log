@@ -1,0 +1,18 @@
+{"time":"2024-10-12T15:33:25.980027448-07:00","level":"INFO","msg":"using version","core version":"0.18.3"}
+{"time":"2024-10-12T15:33:25.980420806-07:00","level":"INFO","msg":"created symlink","path":"/home/bfs/nanoGPT/wandb/run-20241012_153325-jnyhr7aj/logs/debug-core.log"}
+{"time":"2024-10-12T15:33:25.98506657-07:00","level":"ERROR","msg":"dialing: google: could not find default credentials. See https://cloud.google.com/docs/authentication/external/set-up-adc for more information"}
+{"time":"2024-10-12T15:33:26.000869654-07:00","level":"INFO","msg":"created new stream","id":"jnyhr7aj"}
+{"time":"2024-10-12T15:33:26.001152059-07:00","level":"INFO","msg":"stream: started","id":"jnyhr7aj"}
+{"time":"2024-10-12T15:33:26.00116469-07:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"jnyhr7aj"}}
+{"time":"2024-10-12T15:33:26.001223761-07:00","level":"INFO","msg":"handler: started","stream_id":{"value":"jnyhr7aj"}}
+{"time":"2024-10-12T15:33:26.001268932-07:00","level":"INFO","msg":"sender: started","stream_id":{"value":"jnyhr7aj"}}
+{"time":"2024-10-12T15:33:26.3703936-07:00","level":"INFO","msg":"wandb-core","!BADKEY":null}
+{"time":"2024-10-12T15:33:26.37281435-07:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-10-12T15:43:04.911253036-07:00","level":"INFO","msg":"stream: closing","id":"jnyhr7aj"}
+{"time":"2024-10-12T15:43:04.911356359-07:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-10-12T15:43:04.935133324-07:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-10-12T15:43:06.330249244-07:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2024-10-12T15:43:06.520479594-07:00","level":"INFO","msg":"handler: closed","stream_id":{"value":"jnyhr7aj"}}
+{"time":"2024-10-12T15:43:06.520592726-07:00","level":"INFO","msg":"writer: Close: closed","stream_id":{"value":"jnyhr7aj"}}
+{"time":"2024-10-12T15:43:06.520622427-07:00","level":"INFO","msg":"sender: closed","stream_id":{"value":"jnyhr7aj"}}
+{"time":"2024-10-12T15:43:06.5227228-07:00","level":"INFO","msg":"stream: closed","id":"jnyhr7aj"}
