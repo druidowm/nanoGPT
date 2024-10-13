@@ -6,7 +6,7 @@ import pickle
 from contextlib import nullcontext
 import torch
 import tiktoken
-from model import GPTConfig, GPT
+from model_token_predicter import GPTConfig, GPT_token_predictor
 
 # -----------------------------------------------------------------------------
 init_from = 'resume' # either 'resume' (from an out_dir) or a gpt2 variant (e.g. 'gpt2-xl')
@@ -37,7 +37,7 @@ if init_from == 'resume':
     ckpt_path = os.path.join(out_dir, 'ckpt.pt')
     checkpoint = torch.load(ckpt_path, map_location=device)
     gptconf = GPTConfig(**checkpoint['model_args'])
-    model = GPT(gptconf)
+    model = GPT_token_predictor(gptconf)
     state_dict = checkpoint['model']
     unwanted_prefix = '_orig_mod.'
     for k,v in list(state_dict.items()):
@@ -57,4 +57,36 @@ input_text = input("What would you like to tokenize? ")
 char_tokens = [ord(char) for char in input_text]
 char_tokens = torch.tensor(char_tokens, dtype=torch.long, device=device)
 
-model_out = model(char_tokens).argmax(dim=-1)
+model_out = model(char_tokens).argmax(dim=-1)[0]
+
+enc = tiktoken.get_encoding("gpt2")
+true_tokens = enc.encode_ordinary(input_text)
+true_token_locs = enc.decode_with_offsets(true_tokens)[1]
+
+true_out = torch.zeros(len(char_tokens), dtype=torch.int)
+true_out[true_token_locs] = 1
+
+print("Model output:")
+print(model_out)
+print("True output:")
+print(true_out)
+
+# Color code the output text
+model_out = model_out.tolist()
+true_out = true_out.tolist()
+input_text = list(input_text)
+
+input_text_true = input_text.copy()
+input_text_model = input_text.copy()
+
+for i in range(len(input_text)):
+    if true_out[i] == 1:
+        input_text_true[i] = '\033[92m' + input_text[i] + '\033[0m'
+    if model_out[i] == 1:
+        input_text_model[i] = '\033[92m' + input_text[i] + '\033[0m'
+
+print("Model output:")
+print(''.join(input_text_model))
+print("True output:")
+print(''.join(input_text_true))
+
