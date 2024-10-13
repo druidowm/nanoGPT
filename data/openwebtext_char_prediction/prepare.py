@@ -21,8 +21,19 @@ if __name__ == '__main__':
     # takes 54GB in huggingface .cache dir, about 8M documents (8,013,769)
     dataset = load_dataset("openwebtext", num_proc=num_proc_load_dataset)
 
-    # owt by default only contains the 'train' split, so create a test split
-    split_dataset = dataset["train"].train_test_split(test_size=0.0005, seed=2357, shuffle=True)
+    train_portion = 0.1
+
+    # Create a smaller train dataset and a validation set
+    full_train = dataset["train"]
+    train_size = int(len(full_train) * train_portion)
+    
+    # Split the dataset
+    split_dataset = full_train.train_test_split(
+        train_size=train_size,
+        test_size=0.0005,  # This creates a small validation set
+        seed=2357,
+        shuffle=True
+    )
     split_dataset['val'] = split_dataset.pop('test') # rename the test split to val
 
     # this results in:
