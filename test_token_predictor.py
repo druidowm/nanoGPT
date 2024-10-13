@@ -46,7 +46,7 @@ if init_from == 'resume':
     model.load_state_dict(state_dict)
 elif init_from.startswith('gpt2'):
     # init from a given GPT-2 model
-    model = GPT.from_pretrained(init_from, dict(dropout=0.0))
+    model = GPT_token_predictor.from_pretrained(init_from, dict(dropout=0.0))
 
 model.eval()
 model.to(device)
@@ -55,7 +55,7 @@ model.to(device)
 input_text = input("What would you like to tokenize? ")
 
 char_tokens = [ord(char) for char in input_text]
-char_tokens = torch.tensor(char_tokens, dtype=torch.long, device=device)
+char_tokens = torch.tensor([char_tokens], dtype=torch.long, device=device)
 
 model_out = model(char_tokens).argmax(dim=-1)[0]
 
