@@ -84,9 +84,9 @@ input_text_model = input_text.copy()
 
 for i in range(len(input_text)):
     if true_out[i] == 1:
-        input_text_true[i] = '\033[92m|' + input_text[i] + '\033[0m'
+        input_text_true[i] = '\033[92m' + input_text[i] + '\033[0m'
     if model_out[i] == 1:
-        input_text_model[i] = '\033[92m|' + input_text[i] + '\033[0m'
+        input_text_model[i] = '\033[92m' + input_text[i] + '\033[0m'
 
 print("Model output:")
 print(''.join(input_text_model))
