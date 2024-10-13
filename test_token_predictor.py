@@ -63,10 +63,10 @@ enc = tiktoken.get_encoding("gpt2")
 true_tokens = enc.encode_ordinary(input_text)
 true_token_locs = enc.decode_with_offsets(true_tokens)[1]
 
-print(len(char_tokens))
+print(len(char_tokens[0]))
 print(true_token_locs)
 
-true_out = torch.zeros(len(char_tokens), dtype=torch.int)
+true_out = torch.zeros(len(char_tokens[0]), dtype=torch.int)
 true_out[true_token_locs] = 1
 
 print("Model output:")
