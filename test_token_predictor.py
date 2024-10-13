@@ -57,7 +57,7 @@ input_text = input("What would you like to tokenize? ")
 char_tokens = [ord(char) for char in input_text]
 char_tokens = torch.tensor([char_tokens], dtype=torch.long, device=device)
 
-model_out = model(char_tokens).argmax(dim=-1)[0]
+model_out = model(char_tokens)[0].argmax(dim=-1)[0]
 
 enc = tiktoken.get_encoding("gpt2")
 true_tokens = enc.encode_ordinary(input_text)
