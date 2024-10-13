@@ -2,6 +2,7 @@
 # https://github.com/HazyResearch/flash-attention/blob/main/training/src/datamodules/language_modeling_hf.py
 
 import os
+import string
 import torch
 from tqdm import tqdm
 import numpy as np
@@ -53,8 +54,8 @@ if __name__ == '__main__':
     enc = tiktoken.get_encoding("gpt2")
     def process(example):
         # generate random text of the same length as the example
-        example = ''.join([chr(np.random.randint(32, 127)) for _ in range(len(example["text"]))])
-        
+        example = "".join(np.random.choice(list(string.printable), len(example["text"])))
+
         char_tokens = [ord(char) for char in example]
         ids = enc.encode_ordinary(example) # encode_ordinary ignores any special tokens
         token_starts = enc.decode_with_offsets(ids)[1]
