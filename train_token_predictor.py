@@ -121,6 +121,8 @@ val_data_out = np.memmap(os.path.join(data_dir, 'val_token_starts.bin'), dtype=n
 def get_batch(split):
     data = train_data if split == 'train' else val_data
     data_out = train_data_out if split == 'train' else val_data_out
+    print(data.shape)
+    print(data_out.shape)
     ix = torch.randint(len(data) - block_size, (batch_size,))
     x = torch.stack([torch.from_numpy((data[i:i+block_size]).astype(np.int64)) for i in ix])
     y = torch.stack([torch.from_numpy((data_out[i:i+block_size]).astype(np.int64)) for i in ix])
