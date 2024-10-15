@@ -187,11 +187,6 @@ class GPT_token_predictor(nn.Module):
             #filter -1s
             targets_mask = targets != 65535
 
-            print(targets[targets_mask].shape)
-            print(logits[targets_mask].shape)
-            print(torch.min(targets[targets_mask]))
-            print(torch.max(targets[targets_mask]))
-
             loss = F.cross_entropy(logits[targets_mask], targets[targets_mask])
         else:
             # inference-time mini-optimization: only forward the lm_head on the very last position
