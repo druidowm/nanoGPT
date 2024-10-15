@@ -67,14 +67,14 @@ if __name__ == '__main__':
 
         # note: I think eot should be prepended not appended... hmm. it's called "eot" though...
         assert len(char_tokens) == len(output_tokens)
-        out = {'chars': char_tokens, 'output_tokens': output_tokens, 'len': len(char_tokens)}
+        out = {'chars': char_tokens, 'output_tokens_32': output_tokens, 'len': len(char_tokens)}
         return out
 
     # tokenize the dataset
     tokenized = split_dataset.map(
         process,
         remove_columns=['text'],
-        desc="tokenizing the splits, char_to_token",
+        desc="tokenizing the splits, char_to_token 2",
         num_proc=num_proc,
     )
 
@@ -92,7 +92,7 @@ if __name__ == '__main__':
             # Batch together samples for faster write
             batch = dset.shard(num_shards=total_batches, index=batch_idx, contiguous=True).with_format('numpy')
             in_arr_batch = np.concatenate(batch['chars'])
-            out_arr_batch = np.concatenate(batch['output_tokens'])
+            out_arr_batch = np.concatenate(batch['output_tokens_32'])
             # Write into mmap
             in_arr[idx : idx + len(in_arr_batch)] = in_arr_batch
             out_arr[idx : idx + len(out_arr_batch)] = out_arr_batch
