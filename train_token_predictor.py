@@ -118,6 +118,9 @@ train_data_out = np.memmap(os.path.join(data_dir, 'train_token_out.bin'), dtype=
 val_data = np.memmap(os.path.join(data_dir, 'val.bin'), dtype=np.uint16, mode='r')
 val_data_out = np.memmap(os.path.join(data_dir, 'val_token_out.bin'), dtype=np.uint16, mode='r')
 
+assert len(train_data) == len(train_data_out)
+assert len(val_data) == len(val_data_out)
+
 def get_batch(split):
     data = train_data if split == 'train' else val_data
     data_out = train_data_out if split == 'train' else val_data_out
