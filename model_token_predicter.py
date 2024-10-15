@@ -184,9 +184,7 @@ class GPT_token_predictor(nn.Module):
         if targets is not None:
             # if we are given some desired targets also calculate the loss
             logits = self.lm_head(x)
-            #filter -1s
-            valid_targets = torch.where(targets == 65535, -100, targets)
-            loss = F.cross_entropy(logits, valid_targets, ignore_index=-100)
+            loss = F.cross_entropy(logits, targets, ignore_index=65535)
         else:
             # inference-time mini-optimization: only forward the lm_head on the very last position
             logits = self.lm_head(x) # note: using list [-1] to preserve the time dim
