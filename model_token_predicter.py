@@ -184,8 +184,8 @@ class GPT_token_predictor(nn.Module):
         if targets is not None:
             # if we are given some desired targets also calculate the loss
             logits = self.lm_head(x)
-            #print(torch.min(targets))
-            #print(torch.max(targets))
+            print(torch.min(targets))
+            print(torch.max(targets[targets != 4294967295]))
             #input()
             loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=4294967295)
         else:
