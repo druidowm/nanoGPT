@@ -58,7 +58,7 @@ if __name__ == '__main__':
         tokens, token_starts = enc.decode_with_offsets(ids)
 
         token_starts = torch.tensor(token_starts[1:], dtype=torch.long)
-        tokens = torch.tensor(tokens[1:], dtype=torch.int)
+        tokens = torch.tensor(tokens[1:], dtype=torch.long)
 
         # output token[i] from token_starts[i]-1 to token_starts[i+1]-2
 
@@ -84,7 +84,7 @@ if __name__ == '__main__':
         filename = os.path.join(os.path.dirname(__file__), f'{split}.bin')
         dtype = np.uint16 # (can do since enc.max_token_value == 50256 is < 2**16)
         in_arr = np.memmap(filename, dtype=dtype, mode='w+', shape=(arr_len,))
-        out_arr = np.memmap(filename.replace('.bin', '_token_out.bin'), dtype=np.uint8, mode='w+', shape=(arr_len,))
+        out_arr = np.memmap(filename.replace('.bin', '_token_out.bin'), dtype=dtype, mode='w+', shape=(arr_len,))
         total_batches = 1024
 
         idx = 0
