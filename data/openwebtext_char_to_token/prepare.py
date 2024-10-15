@@ -57,12 +57,12 @@ if __name__ == '__main__':
         ids = enc.encode_ordinary(example) # encode_ordinary ignores any special tokens
         tokens, token_starts = enc.decode_with_offsets(ids)
 
-        token_starts = torch.tensor(token_starts[1:], dtype=torch.uint8)
+        token_starts = torch.tensor(token_starts[1:], dtype=torch.long)
         tokens = torch.tensor(tokens[1:], dtype=torch.int)
 
         # output token[i] from token_starts[i]-1 to token_starts[i+1]-2
 
-        output_tokens = torch.zeros(len(char_tokens), dtype=torch.int)-1
+        output_tokens = torch.zeros(len(char_tokens), dtype=torch.long)-1
         output_tokens[token_starts] = tokens
 
         # note: I think eot should be prepended not appended... hmm. it's called "eot" though...
