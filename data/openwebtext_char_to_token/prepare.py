@@ -55,7 +55,7 @@ if __name__ == '__main__':
         example = "|START|" + example["text"]
         char_tokens = [ord(char) for char in example]
         ids = enc.encode_ordinary(example) # encode_ordinary ignores any special tokens
-        tokens, token_starts = enc.decode_with_offsets(ids)[1]
+        tokens, token_starts = enc.decode_with_offsets(ids)
 
         token_starts = torch.tensor(token_starts[1:], dtype=torch.uint8)
         tokens = torch.tensor(tokens[1:], dtype=torch.int)
