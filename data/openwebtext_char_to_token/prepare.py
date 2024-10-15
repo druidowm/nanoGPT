@@ -67,14 +67,14 @@ if __name__ == '__main__':
 
         # note: I think eot should be prepended not appended... hmm. it's called "eot" though...
         assert len(char_tokens) == len(output_tokens)
-        out = {'chars': char_tokens, 'output_tokens_32': output_tokens, 'len': len(char_tokens)}
+        out = {'chars': char_tokens, 'output_tokens': output_tokens, 'len': len(char_tokens)}
         return out
 
     # tokenize the dataset
     tokenized = split_dataset.map(
         process,
         remove_columns=['text'],
-        desc="tokenizing the splits, char_to_token 2",
+        desc="tokenizing the splits, char_to_token",
         num_proc=num_proc,
     )
 
@@ -84,7 +84,7 @@ if __name__ == '__main__':
         filename = os.path.join(os.path.dirname(__file__), f'{split}.bin')
         dtype = np.uint16 # (can do since enc.max_token_value == 50256 is < 2**16)
         in_arr = np.memmap(filename, dtype=np.uint32, mode='w+', shape=(arr_len,))
-        out_arr = np.memmap(filename.replace('.bin', '_token_out.bin'), dtype=dtype, mode='w+', shape=(arr_len,))
+        out_arr = np.memmap(filename.replace('.bin', '_token_out.bin'), dtype=np.uint32, mode='w+', shape=(arr_len,))
         total_batches = 1024
 
         idx = 0
@@ -92,7 +92,7 @@ if __name__ == '__main__':
             # Batch together samples for faster write
             batch = dset.shard(num_shards=total_batches, index=batch_idx, contiguous=True).with_format('numpy')
             in_arr_batch = np.concatenate(batch['chars'])
-            out_arr_batch = np.concatenate(batch['output_tokens_32'])
+            out_arr_batch = np.concatenate(batch['output_tokens'])
             # Write into mmap
             in_arr[idx : idx + len(in_arr_batch)] = in_arr_batch
             out_arr[idx : idx + len(out_arr_batch)] = out_arr_batch
