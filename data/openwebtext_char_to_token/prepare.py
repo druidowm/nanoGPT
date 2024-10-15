@@ -83,7 +83,7 @@ if __name__ == '__main__':
         arr_len = np.sum(dset['len'], dtype=np.uint64)
         filename = os.path.join(os.path.dirname(__file__), f'{split}.bin')
         dtype = np.uint16 # (can do since enc.max_token_value == 50256 is < 2**16)
-        in_arr = np.memmap(filename, dtype=dtype, mode='w+', shape=(arr_len,))
+        in_arr = np.memmap(filename, dtype=np.uint32, mode='w+', shape=(arr_len,))
         out_arr = np.memmap(filename.replace('.bin', '_token_out.bin'), dtype=dtype, mode='w+', shape=(arr_len,))
         total_batches = 1024
 
