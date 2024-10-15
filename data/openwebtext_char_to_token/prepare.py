@@ -91,7 +91,7 @@ if __name__ == '__main__':
         for batch_idx in tqdm(range(total_batches), desc=f'writing {filename}'):
             # Batch together samples for faster write
             batch = dset.shard(num_shards=total_batches, index=batch_idx, contiguous=True).with_format('numpy')
-            in_arr_batch = np.concatenate(batch['charss'])
+            in_arr_batch = np.concatenate(batch['chars'])
             out_arr_batch = np.concatenate(batch['output_tokens'])
             # Write into mmap
             in_arr[idx : idx + len(in_arr_batch)] = in_arr_batch
