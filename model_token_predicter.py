@@ -186,12 +186,16 @@ class GPT_token_predictor(nn.Module):
             logits = self.lm_head(x)
             #filter -1s
             targets_mask = targets != 65535
+            try:
+                if targets_mask.sum() == 0:
+                    print("Warning: All values in targets are 65535, mask is empty")
+                    return logits, torch.tensor(0.0, device=logits.device, requires_grad=True)
 
-            if targets_mask.sum() == 0:
-                print("Warning: All values in targets are 65535, mask is empty")
-                return logits, torch.tensor(0.0, device=logits.device, requires_grad=True)
-
-            loss = F.cross_entropy(logits[targets_mask], targets[targets_mask])
+                loss = F.cross_entropy(logits[targets_mask], targets[targets_mask])
+            except:
+                print(targets_mask)
+                print("Error: ", targets_mask.shape)
+                raise
         else:
             # inference-time mini-optimization: only forward the lm_head on the very last position
             logits = self.lm_head(x) # note: using list [-1] to preserve the time dim
