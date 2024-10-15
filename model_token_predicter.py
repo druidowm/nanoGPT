@@ -185,7 +185,7 @@ class GPT_token_predictor(nn.Module):
             # if we are given some desired targets also calculate the loss
             logits = self.lm_head(x)
             #filter -1s
-            targets_mask = targets != -1
+            targets_mask = targets != 65535
 
             print(targets[targets_mask].shape)
             print(logits[targets_mask].shape)
