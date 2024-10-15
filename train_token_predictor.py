@@ -33,7 +33,7 @@ from model_token_predicter import GPTConfig, GPT_token_predictor
 # default config values designed to train a gpt2 (124M) on OpenWebText
 # I/O
 out_dir = 'out'
-eval_interval = 2000
+eval_interval = 200
 log_interval = 1
 eval_iters = 200
 eval_only = False # if True, script exits right after the first eval
@@ -42,7 +42,7 @@ init_from = 'scratch' # 'scratch' or 'resume' or 'gpt2*'
 # wandb logging
 wandb_log = True # disabled by default
 wandb_project = 'owt'
-wandb_run_name = 'gpt2_token_predictor' + str(time.time())
+wandb_run_name = 'gpt2_char_to_token' + str(time.time())
 # data
 dataset = 'openwebtext_char_prediction'
 gradient_accumulation_steps = 5 * 8 # used to simulate larger batch sizes
@@ -114,9 +114,9 @@ ctx = nullcontext() if device_type == 'cpu' else torch.amp.autocast(device_type=
 # poor man's data loader
 data_dir = os.path.join('data', dataset)
 train_data = np.memmap(os.path.join(data_dir, 'train.bin'), dtype=np.uint16, mode='r')
-train_data_out = np.memmap(os.path.join(data_dir, 'train_token_out.bin'), dtype=np.uint8, mode='r')
+train_data_out = np.memmap(os.path.join(data_dir, 'train_token_out.bin'), dtype=np.uint16, mode='r')
 val_data = np.memmap(os.path.join(data_dir, 'val.bin'), dtype=np.uint16, mode='r')
-val_data_out = np.memmap(os.path.join(data_dir, 'val_token_out.bin'), dtype=np.uint8, mode='r')
+val_data_out = np.memmap(os.path.join(data_dir, 'val_token_out.bin'), dtype=np.uint16, mode='r')
 
 def get_batch(split):
     data = train_data if split == 'train' else val_data
