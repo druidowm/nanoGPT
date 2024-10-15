@@ -2,6 +2,7 @@
 # https://github.com/HazyResearch/flash-attention/blob/main/training/src/datamodules/language_modeling_hf.py
 
 import os
+import torch
 from tqdm import tqdm
 import numpy as np
 import tiktoken
@@ -19,7 +20,7 @@ num_proc_load_dataset = num_proc
 if __name__ == '__main__':
     # takes 54GB in huggingface .cache dir, about 8M documents (8,013,769)
     dataset = load_dataset("openwebtext", num_proc=num_proc_load_dataset)
-    
+
     train_portion = 0.1
 
     # Create a smaller train dataset and a validation set
@@ -51,10 +52,22 @@ if __name__ == '__main__':
     # we now want to tokenize the dataset. first define the encoding function (gpt2 bpe)
     enc = tiktoken.get_encoding("gpt2")
     def process(example):
-        ids = enc.encode_ordinary(example['text']) # encode_ordinary ignores any special tokens
-        ids.append(enc.eot_token) # add the end of text token, e.g. 50256 for gpt2 bpe
+        example = "|START|" + example["text"]
+        char_tokens = [ord(char) for char in example]
+        ids = enc.encode_ordinary(example) # encode_ordinary ignores any special tokens
+        tokens, token_starts = enc.decode_with_offsets(ids)[1]
+
+        token_starts = torch.tensor(token_starts[1:], dtype=torch.uint8)
+        tokens = torch.tensor(tokens[1:], dtype=torch.int)
+
+        # output token[i] from token_starts[i]-1 to token_starts[i+1]-2
+
+        output_tokens = torch.zeros(len(char_tokens), dtype=torch.int)-1
+        output_tokens[token_starts] = tokens
+
         # note: I think eot should be prepended not appended... hmm. it's called "eot" though...
-        out = {'ids': ids, 'len': len(ids)}
+        assert len(char_tokens) == len(output_tokens)
+        out = {'char_tokens': char_tokens, 'output_tokens': output_tokens, 'len': len(char_tokens)}
         return out
 
     # tokenize the dataset
@@ -70,18 +83,22 @@ if __name__ == '__main__':
         arr_len = np.sum(dset['len'], dtype=np.uint64)
         filename = os.path.join(os.path.dirname(__file__), f'{split}.bin')
         dtype = np.uint16 # (can do since enc.max_token_value == 50256 is < 2**16)
-        arr = np.memmap(filename, dtype=dtype, mode='w+', shape=(arr_len,))
+        in_arr = np.memmap(filename, dtype=dtype, mode='w+', shape=(arr_len,))
+        out_arr = np.memmap(filename.replace('.bin', '_token_out.bin'), dtype=np.uint8, mode='w+', shape=(arr_len,))
         total_batches = 1024
 
         idx = 0
         for batch_idx in tqdm(range(total_batches), desc=f'writing {filename}'):
             # Batch together samples for faster write
             batch = dset.shard(num_shards=total_batches, index=batch_idx, contiguous=True).with_format('numpy')
-            arr_batch = np.concatenate(batch['ids'])
+            in_arr_batch = np.concatenate(batch['char_tokens'])
+            out_arr_batch = np.concatenate(batch['output_tokens'])
             # Write into mmap
-            arr[idx : idx + len(arr_batch)] = arr_batch
-            idx += len(arr_batch)
-        arr.flush()
+            in_arr[idx : idx + len(in_arr_batch)] = in_arr_batch
+            out_arr[idx : idx + len(out_arr_batch)] = out_arr_batch
+            idx += len(in_arr_batch)
+        in_arr.flush()
+        out_arr.flush()
 
     # train.bin is ~17GB, val.bin ~8.5MB
     # train has ~9B tokens (9,035,582,198)

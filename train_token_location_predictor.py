@@ -114,9 +114,9 @@ ctx = nullcontext() if device_type == 'cpu' else torch.amp.autocast(device_type=
 # poor man's data loader
 data_dir = os.path.join('data', dataset)
 train_data = np.memmap(os.path.join(data_dir, 'train.bin'), dtype=np.uint16, mode='r')
-train_data_out = np.memmap(os.path.join(data_dir, 'train_token_out.bin'), dtype=np.uint8, mode='r')
+train_data_out = np.memmap(os.path.join(data_dir, 'train_token_starts.bin'), dtype=np.uint8, mode='r')
 val_data = np.memmap(os.path.join(data_dir, 'val.bin'), dtype=np.uint16, mode='r')
-val_data_out = np.memmap(os.path.join(data_dir, 'val_token_out.bin'), dtype=np.uint8, mode='r')
+val_data_out = np.memmap(os.path.join(data_dir, 'val_token_starts.bin'), dtype=np.uint8, mode='r')
 
 def get_batch(split):
     data = train_data if split == 'train' else val_data
@@ -156,7 +156,7 @@ if init_from == 'scratch':
         print("defaulting to vocab_size of GPT-2 to 50304 (50257 rounded up for efficiency)")
     model_args['vocab_size'] = meta_vocab_size if meta_vocab_size is not None else 50304
     gptconf = GPTConfig(**model_args)
-    model = GPT_token_predictor(gptconf, 50304)
+    model = GPT_token_predictor(gptconf)
 elif init_from == 'resume':
     print(f"Resuming training from {out_dir}")
     # resume training from a checkpoint.

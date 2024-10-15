@@ -117,7 +117,7 @@ class GPTConfig:
 
 class GPT_token_predictor(nn.Module):
 
-    def __init__(self, config):
+    def __init__(self, config, output_size=2):
         super().__init__()
         assert config.vocab_size is not None
         assert config.block_size is not None
@@ -130,7 +130,7 @@ class GPT_token_predictor(nn.Module):
             h = nn.ModuleList([Block(config) for _ in range(config.n_layer)]),
             ln_f = LayerNorm(config.n_embd, bias=config.bias),
         ))
-        self.lm_head = nn.Linear(config.n_embd, 2, bias=False)
+        self.lm_head = nn.Linear(config.n_embd, output_size, bias=False)
         # with weight tying when using torch.compile() some warnings get generated:
         # "UserWarning: functional_call was passed multiple values for tied weights.
         # This behavior is deprecated and will be an error in future versions"
@@ -184,7 +184,10 @@ class GPT_token_predictor(nn.Module):
         if targets is not None:
             # if we are given some desired targets also calculate the loss
             logits = self.lm_head(x)
-            loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1)
+            #filter -1s
+            targets_mask = targets != -1
+
+            loss = F.cross_entropy(logits[targets_mask], targets[targets_mask])
         else:
             # inference-time mini-optimization: only forward the lm_head on the very last position
             logits = self.lm_head(x) # note: using list [-1] to preserve the time dim
