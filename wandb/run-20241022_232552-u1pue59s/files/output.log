@@ -1,0 +1,26 @@
+Traceback (most recent call last):
+  File "/Users/owendugan/Documents/GitHub/nanoGPT/train_last_char_token_to_char.py", line 355, in <module>
+    losses = estimate_loss()
+  File "/Users/owendugan/mambaforge/envs/torch_llm/lib/python3.10/site-packages/torch/utils/_contextlib.py", line 115, in decorate_context
+    return func(*args, **kwargs)
+  File "/Users/owendugan/Documents/GitHub/nanoGPT/train_last_char_token_to_char.py", line 257, in estimate_loss
+    logits, loss = model(X, Y, block_size=block_size)
+  File "/Users/owendugan/mambaforge/envs/torch_llm/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/Users/owendugan/mambaforge/envs/torch_llm/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/Users/owendugan/Documents/GitHub/nanoGPT/model_character_predicter.py", line 105, in forward
+    x = block(x, mask = mask)
+  File "/Users/owendugan/mambaforge/envs/torch_llm/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/Users/owendugan/mambaforge/envs/torch_llm/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/Users/owendugan/Documents/GitHub/nanoGPT/model.py", line 172, in forward
+    x = x + self.attn(self.ln_1(x), mask=mask)
+  File "/Users/owendugan/mambaforge/envs/torch_llm/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/Users/owendugan/mambaforge/envs/torch_llm/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/Users/owendugan/Documents/GitHub/nanoGPT/model.py", line 102, in forward
+    y = torch.nn.functional.scaled_dot_product_attention(q, k, v, attn_mask=None, dropout_p=self.dropout if self.training else 0, is_causal=True)
+KeyboardInterrupt

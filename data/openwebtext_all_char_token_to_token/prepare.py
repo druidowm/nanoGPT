@@ -28,7 +28,6 @@ if __name__ == '__main__':
     def process(example):
         # Prepare the input string
         full_example = "|START|" + example["text"]
-        string_bytes = full_example.encode()
         
         # Encode the string to get token IDs
         ids = np.array(enc.encode_ordinary(full_example))
@@ -36,18 +35,24 @@ if __name__ == '__main__':
         # Get the byte lengths of each token
         token_bytes = [enc.decode_bytes([idx]) for idx in ids]
         token_lengths = np.array([len(tok) for tok in token_bytes])
+
+        num_bytes = np.sum(token_lengths)
         
         # Calculate token start positions
         token_starts = np.cumsum(token_lengths[:-1]) - 1
+
+        input_tokens = np.repeat(ids, token_lengths)
         
         # Create output array
-        output_tokens = np.full(len(string_bytes), -1, dtype=np.int32)
-        output_tokens[token_starts] = ids[1:]  # Skip the first token ("|START|")
+        output_tokens = np.full(num_bytes, -1, dtype=np.int32)
+        output_tokens[token_starts] = ids[1:]
+
+        assert len(input_tokens) == len(output_tokens)
         
         return {
-            'bytes': string_bytes,
+            'input_tokens': input_tokens,
             'output_tokens': output_tokens,
-            'len': len(string_bytes)
+            'len': len(input_tokens)
         }
 
     tokenized = split_dataset.map(
@@ -61,14 +66,14 @@ if __name__ == '__main__':
         arr_len = np.sum(dset['len'], dtype=np.uint64)
         filename = os.path.join(BASE_DIR, f'{split}.bin')
         dtype = np.uint16
-        in_arr = np.memmap(filename, dtype=np.uint8, mode='w+', shape=(arr_len,))
+        in_arr = np.memmap(filename, dtype=np.uint16, mode='w+', shape=(arr_len,))
         out_arr = np.memmap(filename.replace('.bin', '_token_out.bin'), dtype=np.int32, mode='w+', shape=(arr_len,))
         total_batches = 1024
 
         idx = 0
         for batch_idx in tqdm(range(total_batches), desc=f'writing {filename}'):
             batch = dset.shard(num_shards=total_batches, index=batch_idx, contiguous=True).with_format('numpy')
-            in_arr_batch = np.concatenate([np.frombuffer(byte_batch, dtype=np.uint8) for byte_batch in batch['bytes']])
+            in_arr_batch = np.concatenate(batch['input_tokens'])
             out_arr_batch = np.concatenate(batch['output_tokens'])
             in_arr[idx : idx + len(in_arr_batch)] = in_arr_batch
             out_arr[idx : idx + len(out_arr_batch)] = out_arr_batch

@@ -23,16 +23,18 @@ import pickle
 from contextlib import nullcontext
 
 import numpy as np
+import tiktoken
 import torch
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.distributed import init_process_group, destroy_process_group
 
-from model import GPTConfig, GPT
+from model import GPTConfig
+from model_character_predicter import GPT_character_predictor
 
 # -----------------------------------------------------------------------------
 # default config values designed to train a gpt2 (124M) on OpenWebText
 # I/O
-out_dir = 'out'
+out_dir = 'out_char_to_char_2'
 eval_interval = 200
 log_interval = 1
 eval_iters = 200
@@ -42,9 +44,9 @@ init_from = 'scratch' # 'scratch' or 'resume' or 'gpt2*'
 # wandb logging
 wandb_log = True # disabled by default
 wandb_project = 'owt'
-wandb_run_name = 'gpt2' # 'run' + str(time.time())
+wandb_run_name = 'gpt2_last_char_to_char' + str(time.time())
 # data
-dataset = 'openwebtext'
+dataset = 'openwebtext_last_char_token_to_char'
 gradient_accumulation_steps = 5 * 8 # used to simulate larger batch sizes
 batch_size = 12 # if gradient_accumulation_steps > 1, this is the micro-batch size
 block_size = 1024
@@ -54,9 +56,6 @@ n_head = 12
 n_embd = 768
 dropout = 0.0 # for pretraining 0 is good, for finetuning try 0.1+
 bias = False # do we use bias inside LayerNorm and Linear layers?
-gated_K = False
-difference = False
-gated_attention = False
 # adamw optimizer
 learning_rate = 6e-4 # max learning rate
 max_iters = 600000 # total number of training iterations
@@ -69,6 +68,9 @@ decay_lr = True # whether to decay the learning rate
 warmup_iters = 2000 # how many steps to warm up for
 lr_decay_iters = 600000 # should be ~= max_iters per Chinchilla
 min_lr = 6e-5 # minimum learning rate, should be ~= learning_rate/10 per Chinchilla
+gated_K = False
+difference = False
+gated_attention = False
 # DDP settings
 backend = 'nccl' # 'nccl', 'gloo', etc.
 # system
@@ -115,14 +117,45 @@ ptdtype = {'float32': torch.float32, 'bfloat16': torch.bfloat16, 'float16': torc
 ctx = nullcontext() if device_type == 'cpu' else torch.amp.autocast(device_type=device_type, dtype=ptdtype)
 
 # poor man's data loader
-data_dir = os.path.join('data', dataset)
+data_dir = os.path.join('/scratch/bfs/owen/nanoGPT', dataset)
 train_data = np.memmap(os.path.join(data_dir, 'train.bin'), dtype=np.uint16, mode='r')
+train_data_out = np.memmap(os.path.join(data_dir, 'train_token_out.bin'), dtype=np.uint8, mode='r')
 val_data = np.memmap(os.path.join(data_dir, 'val.bin'), dtype=np.uint16, mode='r')
+val_data_out = np.memmap(os.path.join(data_dir, 'val_token_out.bin'), dtype=np.uint8, mode='r')
+
+assert len(train_data) == len(train_data_out)
+assert len(val_data) == len(val_data_out)
+
+print(val_data[:10])
+print(val_data_out[:10])
+
+def get_batch_size(data):
+    num_tokens = np.cumsum(data != 65535)
+    return np.searchsorted(num_tokens, block_size, side="left")
+
 def get_batch(split):
     data = train_data if split == 'train' else val_data
+    data_out = train_data_out if split == 'train' else val_data_out
     ix = torch.randint(len(data) - block_size, (batch_size,))
-    x = torch.stack([torch.from_numpy((data[i:i+block_size]).astype(np.int64)) for i in ix])
-    y = torch.stack([torch.from_numpy((data[i+1:i+1+block_size]).astype(np.int64)) for i in ix])
+
+    new_batch_sizes = [get_batch_size(data[i:i+10*block_size]) for i in ix]
+
+
+    # Right pad the batch to the maximum batch size
+    
+    string_bytes = [torch.from_numpy((data_out[i:i+batch_size]).astype(np.int64)) for i, batch_size in zip(ix, new_batch_sizes)]
+    x = [string_bytes[i][:-1] for i in range(batch_size)]
+    y = [string_bytes[i][1:] for i in range(batch_size)]
+    #print(bytes(x[0].tolist()).decode('utf-8', errors='replace').replace('\ufffd', '|'))
+    #print(bytes(y[0].tolist()).decode('utf-8', errors='replace').replace('\ufffd', '|'))
+
+    x = torch.nn.utils.rnn.pad_sequence(x, batch_first=True, padding_value=0)
+    y = torch.nn.utils.rnn.pad_sequence(y, batch_first=True, padding_value=-1)
+
+    # pad to length 10*block_size
+    x = torch.cat([x, torch.zeros(batch_size, 10*block_size - x.size(1), dtype=torch.int64)], dim=1)
+    y = torch.cat([y, torch.zeros(batch_size, 10*block_size - y.size(1), dtype=torch.int64)-1], dim=1)
+
     if device_type == 'cuda':
         # pin arrays x,y, which allows us to move them to GPU asynchronously (non_blocking=True)
         x, y = x.pin_memory().to(device, non_blocking=True), y.pin_memory().to(device, non_blocking=True)
@@ -144,18 +177,19 @@ if os.path.exists(meta_path):
     print(f"found vocab_size = {meta_vocab_size} (inside {meta_path})")
 
 # model init
-model_args = dict(n_layer=n_layer, n_head=n_head, n_embd=n_embd, block_size=block_size,
-                  bias=bias, vocab_size=None, dropout=dropout,
-                  gated_K=gated_K, difference=difference, gated_attention=gated_attention) # start with model_args from command line
+model_args = dict(n_layer=n_layer, n_head=n_head, n_embd=n_embd, block_size=10*block_size,
+                  bias=bias, vocab_size=None, dropout=dropout, gated_K=gated_K,
+                  difference=difference, gated_attention=gated_attention) # start with model_args from command line
 if init_from == 'scratch':
     # init a new model from scratch
     print("Initializing a new model from scratch")
     # determine the vocab size we'll use for from-scratch training
+    meta_vocab_size = 256
     if meta_vocab_size is None:
         print("defaulting to vocab_size of GPT-2 to 50304 (50257 rounded up for efficiency)")
     model_args['vocab_size'] = meta_vocab_size if meta_vocab_size is not None else 50304
     gptconf = GPTConfig(**model_args)
-    model = GPT(gptconf)
+    model = GPT_character_predictor(gptconf)
 elif init_from == 'resume':
     print(f"Resuming training from {out_dir}")
     # resume training from a checkpoint.
@@ -187,10 +221,10 @@ elif init_from.startswith('gpt2'):
     # read off the created config params, so we can store them into checkpoint correctly
     for k in ['n_layer', 'n_head', 'n_embd', 'block_size', 'bias', 'vocab_size']:
         model_args[k] = getattr(model.config, k)
-# crop down the model block size if desired, using model surgery
-if block_size < model.config.block_size:
-    model.crop_block_size(block_size)
-    model_args['block_size'] = block_size # so that the checkpoint will have the right value
+    # crop down the model block size if desired, using model surgery
+    if block_size < model.config.block_size:
+        model.crop_block_size(block_size)
+        model_args['block_size'] = block_size # so that the checkpoint will have the right value
 model.to(device)
 
 # initialize a GradScaler. If enabled=False scaler is a no-op
@@ -222,7 +256,7 @@ def estimate_loss():
         for k in range(eval_iters):
             X, Y = get_batch(split)
             with ctx:
-                logits, loss = model(X, Y)
+                logits, loss = model(X, Y, block_size=block_size)
             losses[k] = loss.item()
         out[split] = losses.mean()
     model.train()
@@ -247,6 +281,56 @@ if wandb_log and master_process:
     import wandb
     wandb.init(project=wandb_project, name=wandb_run_name, config=config)
 
+def nan_hook(self, inp, output):
+    if not isinstance(output, tuple):
+        outputs = [output]
+    else:
+        outputs = output
+
+    for i, out in enumerate(outputs):
+        nan_mask = torch.isnan(out)
+        if nan_mask.any():
+            print("In", self.__class__.__name__)
+            print(f"Found NAN in output {i} at indices: ", nan_mask.nonzero())
+            breakpoint()
+            raise RuntimeError(f"Found NAN in output {i} at indices: ", nan_mask.nonzero())
+        
+def grad_nan_hook(module, grad_input, grad_output):
+    if isinstance(grad_input, tuple):
+        grad_input = list(grad_input)
+    else:
+        grad_input = [grad_input]
+    
+    for i, grad in enumerate(grad_input):
+        if grad is not None:
+            nan_mask = torch.isnan(grad)
+            if nan_mask.any():
+                print(f"NaN detected in gradients of {module.__class__.__name__}")
+                print(f"Gradient {i} contains NaN at indices: {nan_mask.nonzero()}")
+                print("Starting pdb session...")
+                torch.nonzeo
+                breakpoint()
+                return
+
+    if isinstance(grad_output, tuple):
+        grad_output = list(grad_output)
+    else:
+        grad_output = [grad_output]
+    
+    for i, grad in enumerate(grad_output):
+        if grad is not None:
+            nan_mask = torch.isnan(grad)
+            if nan_mask.any():
+                print(f"NaN detected in output gradients of {module.__class__.__name__}")
+                print(f"Output gradient {i} contains NaN at indices: {nan_mask.nonzero()}")
+                print("Starting pdb session...")
+                breakpoint()
+                return
+
+#for submodule in model.modules():
+#    submodule.register_forward_hook(nan_hook)
+#    submodule.register_full_backward_hook(grad_nan_hook)
+
 # training loop
 X, Y = get_batch('train') # fetch the very first batch
 t0 = time.time()
@@ -259,6 +343,14 @@ while True:
     lr = get_lr(iter_num) if decay_lr else learning_rate
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
+
+    # if iter_num < 1250:
+    #     for micro_step in range(gradient_accumulation_steps):
+    #         X, Y = get_batch('train')
+
+    #     iter_num += 1
+    #     local_iter_num += 1
+    #     continue
 
     # evaluate the loss on train/val sets and write checkpoints
     if iter_num % eval_interval == 0 and master_process:
@@ -298,7 +390,7 @@ while True:
             # looking at the source of that context manager, it just toggles this variable
             model.require_backward_grad_sync = (micro_step == gradient_accumulation_steps - 1)
         with ctx:
-            logits, loss = model(X, Y)
+            logits, loss = model(X, Y, block_size=block_size)
             loss = loss / gradient_accumulation_steps # scale the loss to account for gradient accumulation
         # immediately async prefetch next batch while model is doing the forward pass on the GPU
         X, Y = get_batch('train')

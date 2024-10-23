@@ -1,0 +1,31 @@
+{
+    "os": "macOS-15.0.1-arm64-arm-64bit",
+    "python": "3.10.0",
+    "heartbeatAt": "2024-10-23T06:24:19.925744",
+    "startedAt": "2024-10-23T06:24:19.146374",
+    "docker": null,
+    "cuda": null,
+    "args": [
+        "--block_size=256",
+        "--device=mps"
+    ],
+    "state": "running",
+    "program": "/Users/owendugan/Documents/GitHub/nanoGPT/train_last_char_token_to_char.py",
+    "codePath": "train_last_char_token_to_char.py",
+    "host": "DN0a1e2ad0.SUNet",
+    "username": "owendugan",
+    "executable": "/Users/owendugan/mambaforge/envs/torch_llm/bin/python",
+    "cpu_count": 12,
+    "cpu_count_logical": 12,
+    "disk": {
+        "total": 926.3517189025879,
+        "used": 728.5033645629883
+    },
+    "gpuapple": {
+        "type": "arm",
+        "vendor": "Apple"
+    },
+    "memory": {
+        "total": 32.0
+    }
+}
